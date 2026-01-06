@@ -37,6 +37,8 @@ vrrp_instance TEST_1 {
 
 # Tracking processes
 
+If Apache2 stops running, then the priority will drop to 100 and trigger a failover
+
 ```
 vrrp_track_process track_apache {
       process apache2
