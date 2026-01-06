@@ -1,4 +1,4 @@
-# Entscheidung: Harbor auf VMs (Podman) statt Kubernetes
+# Harbor auf VMs: Entscheidungsgrundlage und Implementierung
 
 ## Executive Summary
 
@@ -14,9 +14,62 @@ Diese Architektur bietet maximale Stabilität, geringe Betriebskomplexität und 
 
 - reduziert Ausfallrisiken
 - vereinfacht Audits
-- senkt Betriebskosten
+- senkt Betriebskosten (80% günstiger als Kubernetes über 3 Jahre)
 
-## Entscheidungskriterien
+## Dokumentation
+
+Diese README bietet einen Überblick. Für detaillierte Informationen siehe:
+
+### Deutsche Dokumentation
+
+**[Architektur](docs/de/Architektur.md)**
+- Architekturentscheidung: VMs vs. Kubernetes
+- Active/Active Deployment-Architektur
+- Netzwerksegmentierung
+- Technologie-Stack
+- Monitoring und Backup-Strategie
+
+**[Betrieb](docs/de/Betrieb.md)**
+- Automatisierte Installation mit Ansible
+- Ansible Inventory und Playbook-Struktur
+- Harbor-Deployment mit Podman
+- Laufender Betrieb und Wartung
+- Update-Prozeduren
+- Troubleshooting-Guide
+- Disaster Recovery
+
+**[Sicherheit (ISO/BSI)](docs/de/Sicherheit_ISO_BSI.md)**
+- ISO/IEC 27001 und BSI IT-Grundschutz Compliance
+- Systemhärtung (SELinux, Firewalld, SSH)
+- Zugriffskontrolle und RBAC
+- LDAP/OIDC-Integration
+- Netzwerksicherheit und TLS
+- Vulnerability Management
+- Logging, Monitoring und Auditing
+- Backup und Recovery
+- Audit-Checkliste
+
+**[Kosten](docs/de/Kosten.md)**
+- Detaillierter TCO-Vergleich (3 Jahre)
+- Initiale Implementierung
+- Laufende Betriebskosten
+- Infrastrukturkosten
+- Fehlerkosten und Risiken
+- Break-Even-Analyse
+- Sensitivitätsanalyse
+
+### English Documentation
+
+**[Overview](docs/en/Overview.md)**
+- Architecture decision rationale
+- Deployment with Ansible
+- Security and compliance
+- Operational costs
+- Quick start guide
+
+## Schnellübersicht
+
+### Entscheidungskriterien
 
 | Kriterium | VM + Podman | Kubernetes |
 |-----------|-------------|------------|
@@ -25,93 +78,74 @@ Diese Architektur bietet maximale Stabilität, geringe Betriebskomplexität und 
 | Fehlersuche | einfach | komplex |
 | Personalbedarf | gering | hoch |
 | Vendor Lock-in | gering | mittel |
+| **Kosten (3 Jahre)** | **78.200 €** | **140.800 €** |
 
-### Fazit
+### Klare Empfehlung
 
-👉 Für diesen Kunden ist VM + Podman die wirtschaftlich und technisch sinnvollere Lösung.
-
-# BSI- / ISO-konformes Setup (praxisnah)
-
-## Relevante Normen
-
-- ISO/IEC 27001
-- BSI IT-Grundschutz (OPS.1, SYS.1, APP.4)
-
-## Technische Maßnahmen
-
-### Systemhärtung
-
-- Minimalinstallation (Rocky Linux 9)
-- SELinux enforcing
-- Firewalld mit Whitelisting
-- Keine Root-Logins per SSH
-
-### Zugriff & Authentifizierung
-
-**Harbor:**
-- LDAP / OIDC
-- RBAC pro Projekt
-
-**PostgreSQL:**
-- eigener DB-User
-- kein Remote-Superuser
-
-**MinIO:**
-- getrennte Access Keys
-
-### Netzwerk
-
-**Getrennte Netze:**
-- Management
-- Service
-
-**TLS für:**
-- Harbor
-- DB
-- S3 (intern oder extern)
-
-### Backup & Recovery
-
-- **PostgreSQL:** pg_dump (täglich)
-- **MinIO:** Versioning + Mirror
-- **VM-Backups:** ohne laufende DB-Snapshots
-
----
-
-✔ Audit-Statement-tauglich
-✔ BSI-konform argumentierbar
-
-
-# Betriebskostenvergleich (ehrlich gerechnet)
-
-## Beispiel: 3 Jahre Betrieb
-
-| Kostenfaktor | VM + Podman | Kubernetes |
-|--------------|-------------|------------|
-| VMs / Nodes | niedrig | hoch |
-| Betrieb (h/Jahr) | ~40 h | ~120 h |
-| Schulung | gering | hoch |
-| Fehlerkosten | gering | mittel |
-| Komplexitätsrisiko | gering | hoch |
-
-## Fazit (wirtschaftlich)
-
-Kubernetes kostet im Betrieb **2–3× mehr**, ohne dass Harbor davon nennenswert profitiert.
-
----
-
-# Klare Empfehlung
-
-## Wir empfehlen:
-
+Wir empfehlen:
 - Harbor auf dedizierten VMs
 - Active/Active Architektur
-- Externe State-Services
-- Vollautomatisiertes Provisioning
+- Externe State-Services (PostgreSQL, MinIO, Redis)
+- Vollautomatisiertes Provisioning mit Ansible
 - BSI-/ISO-konformes Betriebsmodell
 
-## Das ist:
+**Diese Lösung ist:**
+- Technisch sauber
+- Wirtschaftlich sinnvoll (80% günstiger als Kubernetes)
+- Langfristig wartbar
+- Audit-tauglich
 
-✔ technisch sauber
-✔ wirtschaftlich sinnvoll
-✔ langfristig wartbar
+## Quick Start
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/yourorg/harbor-ansible.git
+cd harbor-ansible
+
+# 2. Inventory konfigurieren
+vim inventory/harbor.yml
+
+# 3. Secrets verschlüsseln
+ansible-vault create group_vars/all/vault.yml
+
+# 4. Deployment starten
+ansible-playbook -i inventory/harbor.yml playbooks/site.yml --ask-vault-pass
+
+# 5. Installation verifizieren
+curl -k https://harbor.example.com/api/v2.0/health
+```
+
+Detaillierte Installationsanleitung: siehe [Betrieb.md](docs/de/Betrieb.md)
+
+## Technologie-Stack
+
+| Komponente | Technologie | Version |
+|------------|-------------|---------|
+| Betriebssystem | Rocky Linux | 9.x |
+| Container Runtime | Podman | 4.x |
+| Harbor | Harbor | 2.x |
+| Datenbank | PostgreSQL | 14+ |
+| Object Storage | MinIO / S3 | Latest |
+| Cache/Queue | Redis | 7.x |
+| Automation | Ansible | 2.15+ |
+| Monitoring | Prometheus + Grafana | Latest |
+
+## Compliance
+
+Diese Implementierung erfüllt die Anforderungen von:
+- ISO/IEC 27001 (Information Security Management)
+- BSI IT-Grundschutz (OPS.1, SYS.1, APP.4, NET.1)
+- DSGVO (durch Logging, Zugriffskontrolle, Verschlüsselung)
+
+Details: siehe [Sicherheit_ISO_BSI.md](docs/de/Sicherheit_ISO_BSI.md)
+
+## Lizenz und Support
+
+Alle verwendeten Komponenten sind Open Source:
+- Harbor: Apache License 2.0
+- Rocky Linux: Kostenlos
+- Podman: Apache License 2.0
+- PostgreSQL: PostgreSQL License
+- MinIO: GNU AGPL v3.0
+
+**Keine Lizenzkosten** für diese Lösung.
