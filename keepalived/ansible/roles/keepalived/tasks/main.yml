@@ -1,0 +1,45 @@
+---
+- name: Install keepalived
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+    update_cache: true
+
+- name: Deploy API server health check script
+  ansible.builtin.template:
+    src: "check_api_server.sh.j2"
+    dest: "/usr/local/bin/check_api_server.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  when: inventory_hostname in groups['rke2_servers']
+
+- name: Deploy ingress health check script
+  ansible.builtin.template:
+    src: "check_ingress.sh.j2"
+    dest: "/usr/local/bin/check_ingress.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  when: inventory_hostname in groups['rke2_agents']
+
+- name: Place keepalived config from template
+  ansible.builtin.template:
+    src: "keepalived.conf.j2"
+    dest: "/etc/keepalived/keepalived.conf"
+    owner: root
+    group: root
+    mode: "0640"
+    #validate: "keepalived -t -f %s"
+  notify: Restart keepalived
+
+# - name: Enable keepalived service (autostart)
+#   ansible.builtin.systemd:
+#     name: keepalived
+#     enabled: true
+
+# - name: Ensure keepalived is started
+#   ansible.builtin.systemd:
+#     name: keepalived
+#     state: started
+#     enabled: true

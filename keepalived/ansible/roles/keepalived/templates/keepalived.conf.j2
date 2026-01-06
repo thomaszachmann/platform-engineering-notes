@@ -1,0 +1,83 @@
+global_defs {
+    router_id {{ keepalived_router_id }}
+    enable_script_security
+}
+
+{% if inventory_hostname in groups['rke2_servers'] %}
+vrrp_script check_api_server {
+    script "/usr/local/bin/check_api_server.sh"
+    interval {{ keepalived_health_check_interval }}
+    fall {{ keepalived_health_check_fall }}
+    rise {{ keepalived_health_check_rise }}
+}
+
+vrrp_instance IA_API_1 {
+    state {{ keepalived_state | default('MASTER') }}
+    interface {{ ansible_default_ipv4.interface }}
+    virtual_router_id 11
+    priority {{ keepalived_priority | default('100') }}
+    advert_int {{ keepalived_advert_int }}
+
+    authentication {
+        auth_type AH
+        auth_pass {{ keepalived_auth_pass }}
+    }
+
+    virtual_ipaddress {
+        {{ lookup('ansible.builtin.env', 'API_VIP') | default(api_vip, True) }}/{{ keepalived_vip_subnet }}
+    }
+
+    track_script {
+        check_api_server
+    }
+
+    nopreempt
+
+    unicast_peer {
+{% for node in groups["rke2_servers"] %}
+{% if hostvars[node].ansible_default_ipv4.address != ansible_default_ipv4.address %}
+        {{ hostvars[node].ansible_default_ipv4.address }}
+{% endif %}
+{% endfor %}
+    }
+}
+
+{% else %}
+vrrp_script check_ingress {
+    script "/usr/local/bin/check_ingress.sh"
+    interval {{ keepalived_health_check_interval }}
+    fall {{ keepalived_health_check_fall }}
+    rise {{ keepalived_health_check_rise }}
+}
+
+vrrp_instance IP_ING_1 {
+    state {{ keepalived_state | default('MASTER') }}
+    interface {{ ansible_default_ipv4.interface }}
+    virtual_router_id 21
+    priority {{ keepalived_priority | default('100') }}
+    advert_int {{ keepalived_advert_int }}
+
+    authentication {
+        auth_type AH
+        auth_pass {{ keepalived_auth_pass }}
+    }
+
+    virtual_ipaddress {
+        {{ lookup('ansible.builtin.env', 'INGRESS_VIP') | default(ingress_vip, True) }}/{{ keepalived_vip_subnet }}
+    }
+
+    track_script {
+        check_ingress
+    }
+
+    nopreempt
+
+    unicast_peer {
+{% for node in groups["rke2_agents"] %}
+{% if hostvars[node].ansible_default_ipv4.address != ansible_default_ipv4.address %}
+        {{ hostvars[node].ansible_default_ipv4.address }}
+{% endif %}
+{% endfor %}
+    }
+}
+{% endif %}

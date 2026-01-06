@@ -1,0 +1,8 @@
+#!/bin/bash
+# Health check script for RKE2 API Server
+# Checks if the Kubernetes API server is responding on port 6443
+# Exit code 0 = healthy, non-zero = unhealthy
+
+# Check if API server healthz endpoint returns "ok"
+curl -k -s --max-time 3 https://localhost:6443/healthz | grep -q "ok"
+exit $?

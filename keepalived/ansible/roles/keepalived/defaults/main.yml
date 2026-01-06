@@ -1,0 +1,21 @@
+---
+# Keepalived configuration defaults
+
+# Advertisement interval in seconds (how often VRRP advertisements are sent)
+keepalived_advert_int: 2
+
+# VIP subnet mask (CIDR notation)
+keepalived_vip_subnet: 24
+
+# Health check interval in seconds
+keepalived_health_check_interval: 5
+
+# Number of consecutive failures before marking service down
+keepalived_health_check_fall: 3
+
+# Number of consecutive successes before marking service up
+keepalived_health_check_rise: 2
+
+# Router ID (unique identifier for this keepalived instance)
+# Defaults to inventory hostname for easy identification in logs
+keepalived_router_id: "{{ inventory_hostname }}"
