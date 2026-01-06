@@ -35,5 +35,3 @@ vrrp_instance TEST_1 {
 ```
 
 
-
-
