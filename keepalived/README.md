@@ -1,19 +1,19 @@
 # Keepalived
 
-## Overview
+## Übersicht
 
-Keepalived is a routing software providing high availability and load balancing using the VRRP (Virtual Router Redundancy Protocol) protocol. It allows multiple servers to share a virtual IP address, with automatic failover if the master server becomes unavailable.
+Keepalived ist eine Routing-Software, die hohe Verfügbarkeit und Load Balancing mithilfe des VRRP-Protokolls (Virtual Router Redundancy Protocol) bereitstellt. Sie ermöglicht es mehreren Servern, eine virtuelle IP-Adresse gemeinsam zu nutzen, mit automatischem Failover, falls der Master-Server nicht verfügbar ist.
 
-### Key Concepts
+### Wichtige Konzepte
 
-- **Virtual IP (VIP)**: A shared IP address that floats between servers
-- **VRRP**: Protocol for automatic failover between MASTER and BACKUP nodes
-- **Priority**: Determines which server becomes MASTER (higher priority wins)
-- **Virtual Router ID**: Must be identical across all nodes in the same VRRP instance
+- **Virtual IP (VIP)**: Eine gemeinsam genutzte IP-Adresse, die zwischen Servern wechselt
+- **VRRP**: Protokoll für automatisches Failover zwischen MASTER- und BACKUP-Knoten
+- **Priorität**: Bestimmt, welcher Server MASTER wird (höhere Priorität gewinnt)
+- **Virtual Router ID**: Muss auf allen Knoten derselben VRRP-Instanz identisch sein
 
-## Basic Configuration Examples
+## Grundlegende Konfigurationsbeispiele
 
-### MASTER Configuration
+### MASTER-Konfiguration
 
 ```
 vrrp_instance TEST_1 {
@@ -32,9 +32,9 @@ vrrp_instance TEST_1 {
 }
 ```
 
-### BACKUP Configuration
+### BACKUP-Konfiguration
 
-The BACKUP node has a lower priority (90 vs 100) and will take over if the MASTER fails.
+Der BACKUP-Knoten hat eine niedrigere Priorität (90 vs. 100) und übernimmt, wenn der MASTER ausfällt.
 
 ```
 vrrp_instance TEST_1 {
@@ -54,9 +54,9 @@ vrrp_instance TEST_1 {
 ```
 
 
-# Tracking processes
+# Prozesse überwachen
 
-If Apache2 stops running, then the priority will drop to 100 and trigger a failover
+Wenn Apache2 nicht mehr läuft, sinkt die Priorität auf 100 und löst ein Failover aus
 
 ```
 vrrp_track_process track_apache {
@@ -113,7 +113,7 @@ vrrp_instance TEST_1 {
 
 
 
-# Tracking files
+# Dateien überwachen
 
 
 
@@ -142,7 +142,7 @@ vrrp_instance VI_1 {
 }
 ```
 
-You can see that the advertised priority is 249, which is the value in the file (5) multiplied by the weight (1) and added to the base priority (244). Similarly, adjusting the priority to 6 will increase the priority.
+Sie können sehen, dass die angekündigte Priorität 249 beträgt. Dies ist der Wert in der Datei (5), multipliziert mit dem Gewicht (1) und addiert zur Basispriorität (244). Ebenso erhöht das Anpassen der Priorität auf 6 die Gesamtpriorität.
 
 ```
 server1# mkdir /var/run/my_app
@@ -154,17 +154,17 @@ listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
 16:19:32.191562 IP server1 > vrrp.mcast.net: VRRPv2, Advertisement, vrid 51, prio 249, authtype simple, intvl 1s, length 20
 ```
 
-## Tracking Scripts
+## Skripte überwachen
 
-You can use custom scripts to perform health checks and trigger failovers based on application-specific conditions.
+Sie können benutzerdefinierte Skripte verwenden, um Health Checks durchzuführen und Failovers basierend auf anwendungsspezifischen Bedingungen auszulösen.
 
 ```bash
 vrrp_script check_api {
     script "/usr/local/bin/check_api.sh"
-    interval 5       # Check every 5 seconds
-    weight -20       # Reduce priority by 20 if script fails
-    fall 3           # Require 3 failures before marking as down
-    rise 2           # Require 2 successes before marking as up
+    interval 5       # Alle 5 Sekunden prüfen
+    weight -20       # Priorität um 20 reduzieren, wenn Skript fehlschlägt
+    fall 3           # 3 Fehlschläge erforderlich, bevor als ausgefallen markiert
+    rise 2           # 2 Erfolge erforderlich, bevor als aktiv markiert
 }
 
 vrrp_instance VI_1 {
@@ -186,18 +186,18 @@ vrrp_instance VI_1 {
 }
 ```
 
-Example health check script (`/usr/local/bin/check_api.sh`):
+Beispiel für ein Health-Check-Skript (`/usr/local/bin/check_api.sh`):
 
 ```bash
 #!/bin/bash
-# Check if API is responding
+# Prüfen, ob API antwortet
 curl -sf http://localhost:8080/health > /dev/null 2>&1
 exit $?
 ```
 
-## Multiple Virtual IPs
+## Mehrere virtuelle IPs
 
-You can configure multiple virtual IP addresses for the same VRRP instance:
+Sie können mehrere virtuelle IP-Adressen für dieselbe VRRP-Instanz konfigurieren:
 
 ```
 vrrp_instance VI_1 {
@@ -213,9 +213,9 @@ vrrp_instance VI_1 {
 }
 ```
 
-## Unicast Mode
+## Unicast-Modus
 
-By default, Keepalived uses multicast. For environments where multicast is blocked, use unicast:
+Standardmäßig verwendet Keepalived Multicast. Für Umgebungen, in denen Multicast blockiert ist, verwenden Sie Unicast:
 
 ```
 vrrp_instance VI_1 {
@@ -223,10 +223,10 @@ vrrp_instance VI_1 {
     interface eth0
     virtual_router_id 51
     priority 100
-    unicast_src_ip 192.168.1.10    # This server's IP
+    unicast_src_ip 192.168.1.10    # IP dieses Servers
     unicast_peer {
-        192.168.1.11                # BACKUP server IP
-        192.168.1.12                # Another BACKUP server IP
+        192.168.1.11                # BACKUP-Server-IP
+        192.168.1.12                # Weitere BACKUP-Server-IP
     }
     virtual_ipaddress {
         192.168.1.100
@@ -234,126 +234,126 @@ vrrp_instance VI_1 {
 }
 ```
 
-## Troubleshooting
+## Fehlerbehebung
 
-### Check Keepalived Status
+### Keepalived-Status überprüfen
 
 ```bash
-# Check service status
+# Service-Status prüfen
 systemctl status keepalived
 
-# View logs
+# Logs anzeigen
 journalctl -u keepalived -f
 
-# Check current VRRP state
+# Aktuellen VRRP-Status prüfen
 ip addr show | grep -A 2 "inet.*scope global"
 ```
 
-### Common Issues
+### Häufige Probleme
 
-#### 1. Split-Brain (Both nodes become MASTER)
+#### 1. Split-Brain (Beide Knoten werden MASTER)
 
-**Symptoms**: Both servers have the VIP assigned simultaneously.
+**Symptome**: Beide Server haben gleichzeitig die VIP zugewiesen.
 
-**Causes**:
-- Firewall blocking VRRP multicast traffic (224.0.0.18)
-- Network issues between nodes
-- Different `virtual_router_id` values
+**Ursachen**:
+- Firewall blockiert VRRP-Multicast-Traffic (224.0.0.18)
+- Netzwerkprobleme zwischen Knoten
+- Unterschiedliche `virtual_router_id`-Werte
 
-**Solutions**:
+**Lösungen**:
 ```bash
-# Allow VRRP protocol (IP protocol 112)
+# VRRP-Protokoll erlauben (IP-Protokoll 112)
 iptables -A INPUT -p vrrp -j ACCEPT
 iptables -A OUTPUT -p vrrp -j ACCEPT
 
-# Verify VRRP traffic
+# VRRP-Traffic überprüfen
 tcpdump -i eth0 proto 112
 ```
 
-#### 2. VIP Not Assigned
+#### 2. VIP nicht zugewiesen
 
-**Check**:
+**Prüfen**:
 ```bash
-# Verify interface configuration
+# Interface-Konfiguration überprüfen
 ip addr show
 
-# Check VRRP advertisements
+# VRRP-Ankündigungen prüfen
 tcpdump -i eth0 -n proto 112
 
-# Verify priority and state
+# Priorität und Status überprüfen
 grep -E "priority|state" /etc/keepalived/keepalived.conf
 ```
 
-#### 3. Failover Not Triggering
+#### 3. Failover wird nicht ausgelöst
 
-**Debug**:
+**Debugging**:
 ```bash
-# Enable debug logging
+# Debug-Logging aktivieren
 keepalived -D -d -S 7
 
-# Check track script output
+# Track-Skript-Ausgabe prüfen
 /usr/local/bin/check_api.sh
-echo $?  # Should be 0 for success
+echo $?  # Sollte 0 für Erfolg sein
 
-# Verify script permissions
-ls -l /usr/local/bin/check_api.sh  # Should be executable
+# Skript-Berechtigungen überprüfen
+ls -l /usr/local/bin/check_api.sh  # Sollte ausführbar sein
 ```
 
-#### 4. Authentication Failures
+#### 4. Authentifizierungsfehler
 
-Ensure `auth_pass` is identical on all nodes and max 8 characters:
+Stellen Sie sicher, dass `auth_pass` auf allen Knoten identisch ist und maximal 8 Zeichen hat:
 
 ```
 authentication {
     auth_type PASS
-    auth_pass 12345678  # Max 8 characters
+    auth_pass 12345678  # Max. 8 Zeichen
 }
 ```
 
-### Monitoring Commands
+### Monitoring-Befehle
 
 ```bash
-# Monitor VRRP advertisements
+# VRRP-Ankündigungen überwachen
 tcpdump -vvv -i eth0 proto 112
 
-# Check which node is MASTER
+# Prüfen, welcher Knoten MASTER ist
 ip addr show | grep "inet.*scope global.*secondary"
 
-# View real-time keepalived activity
+# Keepalived-Aktivität in Echtzeit anzeigen
 tail -f /var/log/syslog | grep Keepalived
 
-# Check configuration syntax
+# Konfigurationssyntax prüfen
 keepalived -t -f /etc/keepalived/keepalived.conf
 ```
 
 ### Best Practices
 
-1. **Use unicast mode** in cloud environments where multicast may be blocked
-2. **Set different priorities** on each node to control failover order
-3. **Monitor track scripts** carefully - ensure they're fast and reliable
-4. **Use authentication** to prevent rogue VRRP instances
-5. **Test failover** regularly by stopping keepalived on the MASTER
-6. **Keep advert_int low** (1 second) for faster failover detection
-7. **Use track_script over track_process** for more control and flexibility
+1. **Unicast-Modus verwenden** in Cloud-Umgebungen, wo Multicast blockiert sein kann
+2. **Unterschiedliche Prioritäten festlegen** auf jedem Knoten, um die Failover-Reihenfolge zu steuern
+3. **Track-Skripte sorgfältig überwachen** - sicherstellen, dass sie schnell und zuverlässig sind
+4. **Authentifizierung verwenden**, um unerwünschte VRRP-Instanzen zu verhindern
+5. **Failover regelmäßig testen**, indem Keepalived auf dem MASTER gestoppt wird
+6. **advert_int niedrig halten** (1 Sekunde) für schnellere Failover-Erkennung
+7. **track_script statt track_process verwenden** für mehr Kontrolle und Flexibilität
 
-## Configuration File Location
+## Speicherort der Konfigurationsdatei
 
 - **Debian/Ubuntu**: `/etc/keepalived/keepalived.conf`
 - **RHEL/CentOS**: `/etc/keepalived/keepalived.conf`
 
-## Service Management
+## Service-Verwaltung
 
 ```bash
-# Start keepalived
+# Keepalived starten
 systemctl start keepalived
 
-# Enable on boot
+# Beim Booten aktivieren
 systemctl enable keepalived
 
-# Restart after config changes
+# Nach Konfigurationsänderungen neu starten
 systemctl restart keepalived
 
-# Check configuration syntax before restarting
+# Konfigurationssyntax vor dem Neustart prüfen
 keepalived -t && systemctl restart keepalived
 ```
 
