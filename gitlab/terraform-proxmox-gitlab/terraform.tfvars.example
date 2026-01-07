@@ -1,0 +1,37 @@
+# Proxmox API Endpoint
+# Format: https://IP_OR_HOSTNAME:8006
+proxmox_endpoint = "https://192.168.1.100:8006"
+
+# Proxmox API Token
+# Format: USER@REALM!TOKENID=SECRET
+# Beispiel: root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+proxmox_api_token = "root@pam!terraform=YOUR_TOKEN_HERE"
+
+# Proxmox Node Name
+proxmox_node = "pve01"
+
+# SSH Public Key für VM-Zugriff
+# Holen Sie Ihren Key mit: cat ~/.ssh/id_ed25519.pub
+ssh_public_key = "ssh-ed25519 AAAA... your-email@example.com"
+
+# VM ID des Cloud-Init Templates in Proxmox
+template_vm_id = 9000
+
+# GitLab VM Konfiguration
+gitlab_vms = {
+  gitlab-01 = {
+    cores  = 4
+    memory = 8192
+    disk   = 40
+  }
+  gitlab-02 = {
+    cores  = 4
+    memory = 8192
+    disk   = 40
+  }
+  gitlab-data = {
+    cores  = 4
+    memory = 16384
+    disk   = 200
+  }
+}
