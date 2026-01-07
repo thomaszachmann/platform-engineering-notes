@@ -1,0 +1,27 @@
+---
+# Ansible Inventory für Harbor-Infrastruktur
+# Anpassen an tatsächliche IP-Adressen aus Terraform-Output
+
+all:
+  children:
+    harbor_core:
+      hosts:
+        harbor-01:
+          ansible_host: 172.16.0.172  # Anpassen an tatsächliche IP
+        harbor-02:
+          ansible_host: 172.16.0.173  # Anpassen an tatsächliche IP
+      vars:
+        ansible_user: rocky
+        ansible_python_interpreter: /usr/bin/python3
+
+    harbor_data:
+      hosts:
+        harbor-data:
+          ansible_host: 172.16.0.174  # Anpassen an tatsächliche IP
+      vars:
+        ansible_user: rocky
+        ansible_python_interpreter: /usr/bin/python3
+
+  vars:
+    # Globale Variablen für alle Hosts
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

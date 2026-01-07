@@ -1,0 +1,46 @@
+---
+# Playbook für Harbor Data VM
+# Dieses Playbook installiert und konfiguriert PostgreSQL, Redis und MinIO
+
+- name: Harbor Data VM konfigurieren
+  hosts: harbor_data
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Hostnamen setzen
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+      tags: [always]
+
+    - name: /etc/hosts aktualisieren
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ inventory_hostname }}"
+        state: present
+      tags: [always]
+
+  roles:
+    - role: common
+      tags: [common, base]
+
+    - role: postgresql
+      tags: [postgresql, database]
+
+    - role: redis
+      tags: [redis, cache]
+
+    - role: minio
+      tags: [minio, storage]
+
+  post_tasks:
+    - name: Deployment-Status ausgeben
+      ansible.builtin.debug:
+        msg:
+          - "Harbor Data VM erfolgreich konfiguriert!"
+          - "PostgreSQL: Port {{ postgresql_port }}"
+          - "Redis: Port {{ redis_port }}"
+          - "MinIO API: Port {{ minio_api_port }}"
+          - "MinIO Console: http://{{ ansible_default_ipv4.address }}:{{ minio_console_port }}"
+      tags: [always]

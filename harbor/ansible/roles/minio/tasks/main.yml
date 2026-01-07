@@ -1,0 +1,197 @@
+---
+# MinIO-Rolle für Harbor Data VM
+
+- name: MinIO-Gruppe erstellen
+  ansible.builtin.group:
+    name: minio-user
+    state: present
+    system: yes
+  tags: [minio, install]
+
+- name: MinIO-Benutzer erstellen
+  ansible.builtin.user:
+    name: minio-user
+    group: minio-user
+    shell: /sbin/nologin
+    home: /opt/minio
+    system: yes
+    create_home: no
+  tags: [minio, install]
+
+- name: MinIO-Verzeichnisse erstellen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: minio-user
+    group: minio-user
+    mode: '0750'
+  loop:
+    - /opt/minio
+    - /opt/minio/bin
+    - "{{ minio_data_dir }}"
+    - /etc/minio
+  tags: [minio, install]
+
+- name: MinIO Binary herunterladen
+  ansible.builtin.get_url:
+    url: "{{ minio_download_url }}"
+    dest: /opt/minio/bin/minio
+    mode: '0755'
+    owner: minio-user
+    group: minio-user
+  tags: [minio, install]
+
+- name: MinIO Client (mc) Binary herunterladen
+  ansible.builtin.get_url:
+    url: "{{ minio_client_download_url }}"
+    dest: /usr/local/bin/mc
+    mode: '0755'
+  tags: [minio, install]
+
+- name: MinIO-Konfigurationsdatei erstellen
+  ansible.builtin.template:
+    src: minio.env.j2
+    dest: /etc/minio/minio.env
+    owner: minio-user
+    group: minio-user
+    mode: '0640'
+  notify: Restart minio
+  no_log: yes
+  tags: [minio, config]
+
+- name: MinIO Systemd-Service erstellen
+  ansible.builtin.template:
+    src: minio.service.j2
+    dest: /etc/systemd/system/minio.service
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart minio
+  tags: [minio, service]
+
+- name: MinIO aktivieren und starten
+  ansible.builtin.systemd:
+    name: minio
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [minio, service]
+
+- name: Firewall-Regeln für MinIO hinzufügen
+  ansible.posix.firewalld:
+    port: "{{ item }}/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - "{{ minio_api_port }}"
+    - "{{ minio_console_port }}"
+  tags: [minio, firewall]
+
+- name: SELinux-Kontext für MinIO-Ports setzen
+  community.general.seport:
+    ports: "{{ item }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  loop:
+    - "{{ minio_api_port }}"
+    - "{{ minio_console_port }}"
+  when: ansible_selinux.status == "enabled"
+  tags: [minio, selinux]
+
+- name: Warten bis MinIO bereit ist
+  ansible.builtin.wait_for:
+    host: localhost
+    port: "{{ minio_api_port }}"
+    delay: 5
+    timeout: 60
+  tags: [minio, verify]
+
+- name: MinIO Client konfigurieren
+  ansible.builtin.command:
+    cmd: >
+      mc alias set local
+      http://localhost:{{ minio_api_port }}
+      {{ minio_root_user }}
+      {{ minio_root_password }}
+  environment:
+    MC_HOST_local: "http://{{ minio_root_user }}:{{ minio_root_password }}@localhost:{{ minio_api_port }}"
+  changed_when: false
+  no_log: yes
+  tags: [minio, config]
+
+- name: Harbor-Bucket erstellen
+  ansible.builtin.command:
+    cmd: "mc mb local/{{ minio_harbor_bucket }} --ignore-existing"
+  environment:
+    MC_HOST_local: "http://{{ minio_root_user }}:{{ minio_root_password }}@localhost:{{ minio_api_port }}"
+  changed_when: false
+  no_log: yes
+  tags: [minio, config]
+
+- name: MinIO-Benutzer für Harbor erstellen
+  ansible.builtin.command:
+    cmd: >
+      mc admin user add local
+      {{ minio_harbor_user }}
+      {{ minio_harbor_password }}
+  environment:
+    MC_HOST_local: "http://{{ minio_root_user }}:{{ minio_root_password }}@localhost:{{ minio_api_port }}"
+  register: minio_user_result
+  changed_when: "'successfully' in minio_user_result.stdout"
+  failed_when:
+    - minio_user_result.rc != 0
+    - "'already exists' not in minio_user_result.stderr"
+  no_log: yes
+  tags: [minio, config]
+
+- name: MinIO-Policy für Harbor-Bucket erstellen
+  ansible.builtin.copy:
+    dest: /tmp/harbor-bucket-policy.json
+    content: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "s3:*"
+            ],
+            "Resource": [
+              "arn:aws:s3:::{{ minio_harbor_bucket }}/*",
+              "arn:aws:s3:::{{ minio_harbor_bucket }}"
+            ]
+          }
+        ]
+      }
+    mode: '0644'
+  tags: [minio, config]
+
+- name: MinIO-Policy auf Server hochladen
+  ansible.builtin.command:
+    cmd: "mc admin policy create local harbor-bucket-policy /tmp/harbor-bucket-policy.json"
+  environment:
+    MC_HOST_local: "http://{{ minio_root_user }}:{{ minio_root_password }}@localhost:{{ minio_api_port }}"
+  register: minio_policy_result
+  changed_when: "'successfully' in minio_policy_result.stdout"
+  failed_when:
+    - minio_policy_result.rc != 0
+    - "'already exists' not in minio_policy_result.stderr"
+  no_log: yes
+  tags: [minio, config]
+
+- name: Policy dem Harbor-Benutzer zuweisen
+  ansible.builtin.command:
+    cmd: "mc admin policy attach local harbor-bucket-policy --user={{ minio_harbor_user }}"
+  environment:
+    MC_HOST_local: "http://{{ minio_root_user }}:{{ minio_root_password }}@localhost:{{ minio_api_port }}"
+  changed_when: false
+  no_log: yes
+  tags: [minio, config]
+
+- name: Temporäre Policy-Datei entfernen
+  ansible.builtin.file:
+    path: /tmp/harbor-bucket-policy.json
+    state: absent
+  tags: [minio, config]

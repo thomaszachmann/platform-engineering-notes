@@ -1,0 +1,30 @@
+# Ansible
+*.retry
+ansible.log
+/tmp/
+*.pyc
+__pycache__/
+
+# Vault-Dateien (unverschlüsselt)
+**/vault.yml
+!**/vault.yml.example
+
+# Fakten-Cache
+/tmp/ansible_facts/
+
+# SSH-Keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

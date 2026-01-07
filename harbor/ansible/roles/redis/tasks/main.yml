@@ -1,0 +1,108 @@
+---
+# Redis-Rolle für Harbor Data VM
+
+- name: Redis installieren
+  ansible.builtin.dnf:
+    name:
+      - redis
+      - python3-redis
+    state: present
+  tags: [redis, install]
+
+- name: Redis-Konfigurationsdatei anpassen
+  ansible.builtin.lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  loop:
+    - { regexp: '^bind ', line: "bind {{ redis_bind_address }}" }
+    - { regexp: '^port ', line: "port {{ redis_port }}" }
+    - { regexp: '^protected-mode ', line: "protected-mode {{ redis_protected_mode }}" }
+    - { regexp: '^daemonize ', line: "daemonize yes" }
+    - { regexp: '^supervised ', line: "supervised systemd" }
+    - { regexp: '^maxmemory ', line: "maxmemory {{ redis_maxmemory }}" }
+    - { regexp: '^maxmemory-policy ', line: "maxmemory-policy {{ redis_maxmemory_policy }}" }
+    - { regexp: '^save 900 ', line: "save 900 1" }
+    - { regexp: '^save 300 ', line: "save 300 10" }
+    - { regexp: '^save 60 ', line: "save 60 10000" }
+    - { regexp: '^stop-writes-on-bgsave-error ', line: "stop-writes-on-bgsave-error yes" }
+    - { regexp: '^rdbcompression ', line: "rdbcompression yes" }
+    - { regexp: '^rdbchecksum ', line: "rdbchecksum yes" }
+    - { regexp: '^dir ', line: "dir /var/lib/redis" }
+    - { regexp: '^logfile ', line: "logfile /var/log/redis/redis.log" }
+    - { regexp: '^loglevel ', line: "loglevel {{ redis_loglevel }}" }
+  notify: Restart redis
+  tags: [redis, config]
+
+- name: Redis-Passwort setzen (wenn definiert)
+  ansible.builtin.lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: '^#?\s*requirepass '
+    line: "requirepass {{ redis_password }}"
+    backup: yes
+  when: redis_password is defined and redis_password != ""
+  notify: Restart redis
+  no_log: yes
+  tags: [redis, config, security]
+
+- name: Redis-Datenverzeichnis erstellen
+  ansible.builtin.file:
+    path: /var/lib/redis
+    state: directory
+    owner: redis
+    group: redis
+    mode: '0750'
+  tags: [redis, config]
+
+- name: Redis-Logverzeichnis erstellen
+  ansible.builtin.file:
+    path: /var/log/redis
+    state: directory
+    owner: redis
+    group: redis
+    mode: '0750'
+  tags: [redis, config]
+
+- name: Redis aktivieren und starten
+  ansible.builtin.systemd:
+    name: redis
+    state: started
+    enabled: yes
+  tags: [redis, service]
+
+- name: Firewall-Regel für Redis hinzufügen
+  ansible.posix.firewalld:
+    port: "{{ redis_port }}/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  tags: [redis, firewall]
+
+- name: SELinux-Kontext für Redis-Port setzen
+  community.general.seport:
+    ports: "{{ redis_port }}"
+    proto: tcp
+    setype: redis_port_t
+    state: present
+  when: ansible_selinux.status == "enabled"
+  tags: [redis, selinux]
+
+- name: Redis-Systemd-Override für erhöhte Limits erstellen
+  ansible.builtin.file:
+    path: /etc/systemd/system/redis.service.d
+    state: directory
+    mode: '0755'
+  tags: [redis, config]
+
+- name: Redis-Systemd-Override-Datei erstellen
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/redis.service.d/override.conf
+    content: |
+      [Service]
+      LimitNOFILE=65536
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart redis
+  tags: [redis, config]

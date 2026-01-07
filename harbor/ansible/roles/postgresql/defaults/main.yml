@@ -1,0 +1,25 @@
+---
+# Defaults für PostgreSQL-Rolle
+
+# PostgreSQL Version
+postgresql_version: "16"
+
+# PostgreSQL Netzwerk-Konfiguration
+postgresql_listen_addresses: "*"
+postgresql_port: 5432
+
+# PostgreSQL Performance-Tuning (für 16GB RAM VM)
+postgresql_max_connections: 200
+postgresql_shared_buffers: "4GB"
+postgresql_effective_cache_size: "12GB"
+postgresql_maintenance_work_mem: "1GB"
+
+# Harbor-Datenbank-Konfiguration
+harbor_db_name: "harbor"
+harbor_db_user: "harbor"
+harbor_db_password: "ChangeMe123!"  # WICHTIG: In vault.yml überschreiben!
+
+# Allowed Hosts für Harbor (Harbor-VMs IPs/Subnets)
+postgresql_allowed_hosts:
+  - "172.16.0.0/24"  # Anpassen an tatsächliches Subnet
+  - "10.0.0.0/24"    # Anpassen an tatsächliches Subnet

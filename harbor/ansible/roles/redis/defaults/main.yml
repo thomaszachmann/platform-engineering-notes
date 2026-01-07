@@ -1,0 +1,17 @@
+---
+# Defaults für Redis-Rolle
+
+# Redis Netzwerk-Konfiguration
+redis_bind_address: "0.0.0.0"  # Auf allen Interfaces lauschen
+redis_port: 6379
+redis_protected_mode: "yes"
+
+# Redis Authentifizierung
+redis_password: "ChangeMe123!"  # WICHTIG: In vault.yml überschreiben!
+
+# Redis Memory-Konfiguration (für 16GB RAM VM, Redis bekommt ~4GB)
+redis_maxmemory: "4gb"
+redis_maxmemory_policy: "allkeys-lru"
+
+# Redis Logging
+redis_loglevel: "notice"

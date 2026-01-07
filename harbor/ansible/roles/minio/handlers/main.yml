@@ -1,0 +1,11 @@
+---
+# Handler für MinIO-Rolle
+
+- name: Restart minio
+  ansible.builtin.systemd:
+    name: minio
+    state: restarted
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes

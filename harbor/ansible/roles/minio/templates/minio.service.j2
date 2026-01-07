@@ -1,0 +1,44 @@
+[Unit]
+Description=MinIO Object Storage
+Documentation=https://docs.min.io
+Wants=network-online.target
+After=network-online.target
+AssertFileIsExecutable=/opt/minio/bin/minio
+
+[Service]
+Type=notify
+User=minio-user
+Group=minio-user
+
+EnvironmentFile=/etc/minio/minio.env
+
+ExecStart=/opt/minio/bin/minio server \
+    --address :${MINIO_API_PORT} \
+    --console-address :${MINIO_CONSOLE_PORT} \
+    ${MINIO_VOLUMES}
+
+Restart=always
+RestartSec=5s
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ minio_data_dir }}
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+TasksMax=4096
+
+# Performance
+Nice=-5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=2
+
+[Install]
+WantedBy=multi-user.target

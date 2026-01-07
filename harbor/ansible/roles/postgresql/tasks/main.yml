@@ -1,0 +1,115 @@
+---
+# PostgreSQL-Rolle für Harbor Data VM
+
+- name: PostgreSQL Repository installieren
+  ansible.builtin.dnf:
+    name: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+    state: present
+    disable_gpg_check: yes
+  tags: [postgresql, install]
+
+- name: PostgreSQL Server installieren
+  ansible.builtin.dnf:
+    name:
+      - postgresql{{ postgresql_version }}-server
+      - postgresql{{ postgresql_version }}-contrib
+      - python3-psycopg2
+    state: present
+  tags: [postgresql, install]
+
+- name: PostgreSQL Datenverzeichnis initialisieren
+  ansible.builtin.command:
+    cmd: "/usr/pgsql-{{ postgresql_version }}/bin/postgresql-{{ postgresql_version }}-setup initdb"
+    creates: "/var/lib/pgsql/{{ postgresql_version }}/data/PG_VERSION"
+  tags: [postgresql, init]
+
+- name: PostgreSQL Konfiguration anpassen (postgresql.conf)
+  ansible.builtin.lineinfile:
+    path: "/var/lib/pgsql/{{ postgresql_version }}/data/postgresql.conf"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  loop:
+    - { regexp: '^#?listen_addresses', line: "listen_addresses = '{{ postgresql_listen_addresses }}'" }
+    - { regexp: '^#?max_connections', line: "max_connections = {{ postgresql_max_connections }}" }
+    - { regexp: '^#?shared_buffers', line: "shared_buffers = {{ postgresql_shared_buffers }}" }
+    - { regexp: '^#?effective_cache_size', line: "effective_cache_size = {{ postgresql_effective_cache_size }}" }
+    - { regexp: '^#?maintenance_work_mem', line: "maintenance_work_mem = {{ postgresql_maintenance_work_mem }}" }
+    - { regexp: '^#?checkpoint_completion_target', line: "checkpoint_completion_target = 0.9" }
+    - { regexp: '^#?wal_buffers', line: "wal_buffers = 16MB" }
+    - { regexp: '^#?default_statistics_target', line: "default_statistics_target = 100" }
+    - { regexp: '^#?random_page_cost', line: "random_page_cost = 1.1" }
+    - { regexp: '^#?log_line_prefix', line: "log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '" }
+    - { regexp: '^#?log_timezone', line: "log_timezone = 'Europe/Berlin'" }
+  notify: Restart postgresql
+  tags: [postgresql, config]
+
+- name: PostgreSQL pg_hba.conf konfigurieren
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: "/var/lib/pgsql/{{ postgresql_version }}/data/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: '0600'
+    backup: yes
+  notify: Restart postgresql
+  tags: [postgresql, config]
+
+- name: PostgreSQL aktivieren und starten
+  ansible.builtin.systemd:
+    name: "postgresql-{{ postgresql_version }}"
+    state: started
+    enabled: yes
+  tags: [postgresql, service]
+
+- name: Firewall-Regel für PostgreSQL hinzufügen
+  ansible.posix.firewalld:
+    port: "{{ postgresql_port }}/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  tags: [postgresql, firewall]
+
+- name: Harbor-Datenbank erstellen
+  community.postgresql.postgresql_db:
+    name: "{{ harbor_db_name }}"
+    encoding: UTF-8
+    lc_collate: en_US.UTF-8
+    lc_ctype: en_US.UTF-8
+    template: template0
+    state: present
+  become: yes
+  become_user: postgres
+  tags: [postgresql, database]
+
+- name: Harbor-Datenbankbenutzer erstellen
+  community.postgresql.postgresql_user:
+    name: "{{ harbor_db_user }}"
+    password: "{{ harbor_db_password }}"
+    db: "{{ harbor_db_name }}"
+    priv: ALL
+    state: present
+  become: yes
+  become_user: postgres
+  no_log: yes
+  tags: [postgresql, database]
+
+- name: Berechtigungen für Harbor-Datenbank setzen
+  community.postgresql.postgresql_privs:
+    database: "{{ harbor_db_name }}"
+    roles: "{{ harbor_db_user }}"
+    type: database
+    privs: ALL
+    state: present
+  become: yes
+  become_user: postgres
+  tags: [postgresql, database]
+
+- name: SELinux-Kontext für PostgreSQL-Port setzen
+  community.general.seport:
+    ports: "{{ postgresql_port }}"
+    proto: tcp
+    setype: postgresql_port_t
+    state: present
+  when: ansible_selinux.status == "enabled"
+  tags: [postgresql, selinux]

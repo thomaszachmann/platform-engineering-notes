@@ -1,0 +1,26 @@
+---
+# Defaults für MinIO-Rolle
+
+# MinIO Download URLs
+minio_download_url: "https://dl.min.io/server/minio/release/linux-amd64/minio"
+minio_client_download_url: "https://dl.min.io/client/mc/release/linux-amd64/mc"
+
+# MinIO Root-Credentials (Admin)
+minio_root_user: "minioadmin"
+minio_root_password: "ChangeMe123!"  # WICHTIG: In vault.yml überschreiben!
+
+# MinIO Harbor-Benutzer
+minio_harbor_user: "harbor"
+minio_harbor_password: "HarborStorage123!"  # WICHTIG: In vault.yml überschreiben!
+minio_harbor_bucket: "harbor-storage"
+
+# MinIO Ports
+minio_api_port: 9000
+minio_console_port: 9001
+
+# MinIO Data Directory
+minio_data_dir: "/data/minio"
+
+# MinIO Site Configuration
+minio_site_name: "harbor-minio"
+minio_site_region: "eu-central-1"

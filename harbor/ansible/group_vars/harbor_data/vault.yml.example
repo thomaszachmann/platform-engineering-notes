@@ -1,0 +1,18 @@
+---
+# Beispiel für verschlüsselte Vault-Variablen
+# Diese Datei kopieren nach vault.yml und mit ansible-vault verschlüsseln:
+# ansible-vault encrypt group_vars/harbor_data/vault.yml
+
+# PostgreSQL Passwörter
+harbor_db_password: "SuperSecurePassword123!"
+
+# Redis Passwort
+redis_password: "RedisSecurePassword456!"
+
+# MinIO Root-Credentials
+minio_root_user: "minioadmin"
+minio_root_password: "MinIOAdminPassword789!"
+
+# MinIO Harbor-Benutzer
+minio_harbor_user: "harbor"
+minio_harbor_password: "HarborStoragePassword012!"

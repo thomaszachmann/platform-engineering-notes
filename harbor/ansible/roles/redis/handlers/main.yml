@@ -1,0 +1,11 @@
+---
+# Handler für Redis-Rolle
+
+- name: Restart redis
+  ansible.builtin.systemd:
+    name: redis
+    state: restarted
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes

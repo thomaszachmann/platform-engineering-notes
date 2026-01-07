@@ -1,0 +1,14 @@
+---
+# Defaults für Common-Rolle
+
+# Zeitsynchronisierung
+ntp_servers:
+  - 0.de.pool.ntp.org
+  - 1.de.pool.ntp.org
+  - 2.de.pool.ntp.org
+
+# SSH-Konfiguration
+ssh_port: 22
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2

@@ -1,0 +1,103 @@
+---
+# Common role - Systemhärtung für Harbor Data VM (BSI/ISO-konform)
+
+- name: System Updates installieren
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    update_cache: yes
+  tags: [system, updates]
+
+- name: Grundlegende Pakete installieren
+  ansible.builtin.dnf:
+    name:
+      - vim
+      - wget
+      - curl
+      - net-tools
+      - firewalld
+      - policycoreutils-python-utils
+      - chrony
+      - rsyslog
+      - logrotate
+    state: present
+  tags: [system, packages]
+
+- name: SELinux auf enforcing setzen
+  ansible.posix.selinux:
+    policy: targeted
+    state: enforcing
+  tags: [security, selinux]
+
+- name: Firewalld aktivieren und starten
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+  tags: [security, firewall]
+
+- name: SSH-Härtung konfigurieren
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    backup: yes
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+    - { regexp: '^#?PermitEmptyPasswords', line: 'PermitEmptyPasswords no' }
+    - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
+    - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries 3' }
+    - { regexp: '^#?ClientAliveInterval', line: 'ClientAliveInterval 300' }
+    - { regexp: '^#?ClientAliveCountMax', line: 'ClientAliveCountMax 2' }
+  notify: Restart sshd
+  tags: [security, ssh]
+
+- name: Chrony für Zeitsynchronisierung aktivieren
+  ansible.builtin.systemd:
+    name: chronyd
+    state: started
+    enabled: yes
+  tags: [system, time]
+
+- name: Rsyslog aktivieren
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: started
+    enabled: yes
+  tags: [system, logging]
+
+- name: Kernel-Parameter für Sicherheit setzen
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_set: yes
+    reload: yes
+  loop:
+    - { name: 'net.ipv4.ip_forward', value: '0' }
+    - { name: 'net.ipv4.conf.all.send_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.default.send_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.all.secure_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.default.secure_redirects', value: '0' }
+    - { name: 'net.ipv4.icmp_echo_ignore_broadcasts', value: '1' }
+    - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+  tags: [security, kernel]
+
+- name: Audit-Daemon installieren und aktivieren
+  block:
+    - name: Auditd installieren
+      ansible.builtin.dnf:
+        name: audit
+        state: present
+
+    - name: Auditd aktivieren
+      ansible.builtin.systemd:
+        name: auditd
+        state: started
+        enabled: yes
+  tags: [security, audit]
