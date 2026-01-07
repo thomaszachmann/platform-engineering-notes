@@ -1,5 +1,9 @@
 provider "proxmox" {
-  endpoint = "https://proxmox.example.local:8006"
+  endpoint  = var.proxmox_endpoint
   api_token = var.proxmox_api_token
   insecure  = true
+
+  ssh {
+    agent = false
+  }
 }

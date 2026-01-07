@@ -1,3 +1,9 @@
+variable "proxmox_endpoint" {
+  type        = string
+  description = "Proxmox API endpoint (e.g., https://192.168.1.100:8006)"
+  default     = "https://172.16.0.162:8006"
+}
+
 variable "proxmox_api_token" {
   type      = string
   sensitive = true
@@ -22,9 +28,13 @@ variable "ssh_public_key" {
   type = string
 }
 
+variable "template_vm_id" {
+  type        = number
+  description = "VM ID of the cloud-init template to clone from"
+}
+
 variable "harbor_vms" {
   type = map(object({
-    ip     = string
     cores  = number
     memory = number
     disk   = number

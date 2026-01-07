@@ -4,6 +4,11 @@ resource "proxmox_virtual_environment_vm" "harbor" {
   name      = each.key
   node_name = var.proxmox_node
 
+  clone {
+    vm_id = var.template_vm_id
+    full  = true
+  }
+
   cpu {
     cores = each.value.cores
     type  = "host"
@@ -15,7 +20,7 @@ resource "proxmox_virtual_environment_vm" "harbor" {
 
   disk {
     datastore_id = var.vm_storage
-    size         = "${each.value.disk}G"
+    size         = each.value.disk
     interface    = "scsi0"
   }
 
@@ -26,8 +31,7 @@ resource "proxmox_virtual_environment_vm" "harbor" {
   initialization {
     ip_config {
       ipv4 {
-        address = each.value.ip
-        gateway = "10.10.10.1"
+        address = "dhcp"
       }
     }
 
@@ -35,11 +39,15 @@ resource "proxmox_virtual_environment_vm" "harbor" {
       username = "rocky"
       keys     = [var.ssh_public_key]
     }
-
-    user_data_file_id = proxmox_virtual_environment_file.cloudinit.id
   }
 
   operating_system {
     type = "l26"
   }
+
+  agent {
+    enabled = true
+  }
+
+  serial_device {}
 }

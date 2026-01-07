@@ -7,14 +7,14 @@ users:
     ssh_authorized_keys:
       - ${ssh_key}
 
-package_update: true
-packages:
-  - vim
-  - curl
-  - git
-  - podman
-  - firewalld
+#package_update: true
+#packages:
+#  - vim
+#  - curl
+#  - git
+#  - podman
+#  - firewalld
 
-runcmd:
-  - systemctl enable --now firewalld
-  - systemctl enable --now podman
+#runcmd:
+#  - systemctl enable --now firewalld
+#  - systemctl enable --now podman
