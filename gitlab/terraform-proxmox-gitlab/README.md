@@ -491,6 +491,44 @@ qm set 9000 --agent enabled=1
 qm template 9000
 ```
 
+**Alternativ: Ubuntu 24.04 Cloud-Image**
+
+```bash
+# Ubuntu 24.04 LTS (Noble Numbat) Cloud-Image herunterladen
+cd /tmp
+wget https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+
+# VM mit ID 9001 erstellen
+qm create 9001 --name ubuntu-24.04-template \
+  --memory 2048 \
+  --cores 2 \
+  --net0 virtio,bridge=vmbr0
+
+# Disk importieren und konfigurieren
+qm importdisk 9001 noble-server-cloudimg-amd64.img local-lvm
+qm set 9001 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9001-disk-0
+
+# Cloud-Init Drive hinzufügen
+qm set 9001 --ide2 local-lvm:cloudinit
+
+# Boot-Konfiguration
+qm set 9001 --boot c --bootdisk scsi0
+
+# Serial Console für Cloud-Init
+qm set 9001 --serial0 socket --vga serial0
+
+# QEMU Guest Agent aktivieren (empfohlen)
+qm set 9001 --agent enabled=1
+
+# Als Template markieren
+qm template 9001
+```
+
+**Hinweis**: Bei Verwendung von Ubuntu 24.04 müssen Sie in `terraform.tfvars` die Template-ID anpassen:
+```hcl
+template_vm_id = 9001
+```
+
 ### 2. Proxmox API-Token erstellen
 
 1. In Proxmox Web-UI navigieren zu: **Datacenter → Permissions → API Tokens**
